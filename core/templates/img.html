@@ -1,0 +1,31 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>img</title>
+<script type="text/javascript">
+function reshape() {
+var imgTags = document.getElementsByTagName("img");
+var len = imgTags.length;
+for(var i=0;i<len;i++) {
+	imgTags.item(i).style.width = 500;
+	imgTags.item(i).onclick = function() {
+		window.open(this.src,null,null,null);
+	};
+}
+}
+</script>
+<style type="text/css">
+img{ width:500px; height:500px;}
+</style>
+</head>
+
+<body onload="reshape();">
+<div id="frame_div" style="background-color:#B8BFD8" text-align="center">
+      {% for pic in pics %}
+        <p><img src="{{ pic[0] }}" "height:873px; width:600px"/></p>
+        <h3> {{ pic[1] }} </h> 
+      {% end %}
+
+</div>
+</body>
+</html>

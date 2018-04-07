@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>test</title>
+        <style type="text/css">
+          div,img{ width:100%;}
+        </style>
+    </head>
+    <body>
+      <!--
+      <img alt="Brand" src="static/images/test_1.jpg">
+      <h1> LALA </h1>
+      <img alt="Brand" src="http://mmbiz.qpic.cn/mmbiz_jpg/8TLtg6ibUImWjXvrGgRE5UTaHItGWMWQcjBlUCM4DKVP4F9MzmnTUWtdhWtWev1lbtfciasglffyOibMZRnY6SWAQ/0">
+      <img alt="Brand" src="/Users/Brishen/coding/project/weixin_local/core/static/weixin_img/6365850623597701506.jpg">
+      -->
+      {% for pic in pics %}
+        <img src="{{ pic[0] }}" hight="200">
+        <h1> {{ pic[1] }} </h> 
+      {% end %}
+    </body>
+</html>
