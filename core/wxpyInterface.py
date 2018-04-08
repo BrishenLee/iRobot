@@ -128,6 +128,8 @@ class WxpyHandler(tornado.web.RequestHandler):
             #更新目标群member信息
             #target_group.update_group(members_details=True)
             for friend_name in REDIS_OBJ.client.smembers('TARGET_FRIENDS'):
+                if friend_name not in msg.text:
+                    pass
                 friends = bot.friends().search(friend_name)
                 if len(friends) != 1:
                     logger.info('Found zero or more than one friend [%s] [%s]' % (friend_name, ','.join([f.name for f in friends])))
@@ -141,7 +143,7 @@ class WxpyHandler(tornado.web.RequestHandler):
                 logger.info('Send auto reply [%s] in group [%s]' % (TARGET_REPLY, msg.chat.nick_name))
                 msg.reply_msg(TARGET_REPLY)
                 msg.forward(bot.self, prefix='Send auto reply [', suffix='in group [%s]' % msg.chat.nick_name)
-                msg.forward(bot.friends.search(u'lichunchun_0120')[0], suffix=TARGET_SUFFIX)
+                msg.forward(bot.friends.search(u'李春春')[0], suffix=TARGET_SUFFIX)
 
 
 
