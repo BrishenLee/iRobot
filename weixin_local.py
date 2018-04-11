@@ -33,6 +33,7 @@ def main():
     #db_schedule.execute()
     task_schedule = TaskSchedule()
     task_schedule.redisSchedule(3600000)
+    task_schedule.mongoSchedule(10000)
     tornado.ioloop.IOLoop.current().start()
 
 if __name__ == '__main__':

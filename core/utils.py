@@ -23,6 +23,7 @@ PROJ_PATH = os.path.expanduser('~/project/weixin_local/')
 #PROJ_CORE_PATH = '/home/pi/Project/weixin_local/core/'
 PROJ_CORE_PATH = '%s/core' % PROJ_PATH
 PROJ_LOG_FILE = '%s/log/weixin.log' % PROJ_PATH
+PROJ_SCHEDULE_FILE = '%s/TC-SCHEDULE' % PROJ_CORE_PATH
 WEIXIN_PIC_PATH = '%s/static/weixin_img/' % PROJ_CORE_PATH
 WEIXIN_THUMBPIC_PATH = '%s/static/weixin_thumb/' % PROJ_CORE_PATH
 
@@ -32,6 +33,7 @@ TARGET_GROUPS = [u'826工程投产（演练）指令群']
 TARGET_KEYWORDS = [u'具备执行条件', u'收到请回复']
 TARGET_REPLY = u'收到'
 TARGET_SUFFIX = u"--From Brishen's robot"
+REMIND_DURATION = 600
 
 def get_random_err_msg():
     rand_msgs = [u'哎呀，伦家懵逼了', \

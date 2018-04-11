@@ -24,8 +24,6 @@ logger = logging.getLogger('wxpyInterface')
 TURING_BOT = TuringBot()
 MONGO_OBJ = MongoDB()
 REDIS_OBJ = RedisDB()
-#清理数据库
-REDIS_OBJ.client.delete('TARGET_FRIENDS')
 global bot
 
 @gen.coroutine
@@ -33,6 +31,18 @@ def cur_wxpy_mode():
     wxpy_mode = REDIS_OBJ.client.get('WXPY_MODE')
     logger.info('Current mode: %s' % wxpy_mode)
     bot.self.send_msg('Current mode: %s' % wxpy_mode)
+
+@gen.coroutine
+def register_task_reminder():
+    for friend_name in REDIS_OBJ.client.smembers('TARGET_FRIENDS'):
+        logger.info('Search register [%s] task' % friend_name)
+        #TODO 
+        #cur_timestramp = time.time()
+        cur_timestramp = time.mktime(time.strptime('2018-04-07 11:52:00','%Y-%m-%d %H:%M:%S'))
+        remind_info = MONGO_OBJ.task_reminder(friend_name, cur_timestramp, duration=REMIND_DURATION)
+        if remind_info.strip():
+            bot.self.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
+            #TODO add friend reminder
 
 def set_wxpy_mode(mode):
     REDIS_OBJ.client.set('WXPY_MODE', mode)
@@ -64,6 +74,13 @@ class WxpyHandler(tornado.web.RequestHandler):
         overwrite setup
         """
         logger.info('===== WXPY MESSAGE START =====')
+        #清理数据库
+        logger.info('Database preprocess...')
+        REDIS_OBJ.client.delete('TARGET_FRIENDS')
+        #TODO, 临时策略
+        REDIS_OBJ.client.sadd('TARGET_FRIENDS', u'刘兵')
+        MONGO_OBJ.xhx_task.remove()
+        MONGO_OBJ.load_schedule(PROJ_SCHEDULE_FILE)
 
     def on_finish(self):
         """
@@ -101,12 +118,26 @@ class WxpyHandler(tornado.web.RequestHandler):
             register_names = content.strip().split()[1:] if len(content.strip().split()) > 1 else []
             for rn in register_names:
                 logger.info('Add register [%s]' % rn)
+                friends = bot.friends().search(rn)
+                if len(friends) != 1:
+                    logger.info('Add register failed [%s]' % ','.join(f.name for f in friends))
+                    msg.forward(bot.self, prefix='Add register [%s] failed' % rn, suffix='0 or more than 1 friends found')
+                    continue
+                logger.info('Add register [%s][nick_name:%s, puid=%s] success' % (rn, friends[0].nick_name, friends[0].puid))
                 REDIS_OBJ.client.sadd('TARGET_FRIENDS', rn)
-                msg.forward(bot.self, prefix='Add register')
+                bot.self.send_msg('Add register [%s][nick_name:%s, puid=%s] success' % (rn, friends[0].nick_name,
+                    friends[0].puid))
             logger.info(dump_json('All registers', list(REDIS_OBJ.client.smembers('TARGET_FRIENDS'))))
             return_msg = 'All registers : [%s]'  % ','.join(list(REDIS_OBJ.client.smembers('TARGET_FRIENDS')))
+        elif content.strip().lower().startswith('task'):
+            task_owners = content.strip().split()[1:]
+            if len(task_owners) < 1:
+                logger.error('No task owner found')
+            for task_owner in task_owners:
+                bot.self.send_msg(MONGO_OBJ.get_task_by_name(task_owner))
         #return时return_msg将发送到自己微信
         return return_msg
+
 
     @bot.register(Friend, TEXT)
     def friend_reply(msg):
@@ -143,7 +174,7 @@ class WxpyHandler(tornado.web.RequestHandler):
                 logger.info('Send auto reply [%s] in group [%s]' % (TARGET_REPLY, msg.chat.nick_name))
                 msg.reply_msg(TARGET_REPLY)
                 msg.forward(bot.self, prefix='Send auto reply [', suffix='in group [%s]' % msg.chat.nick_name)
-                msg.forward(bot.friends.search(u'李春春')[0], suffix=TARGET_SUFFIX)
+                msg.forward(bot.friends().search(u'李春春')[0], suffix=TARGET_SUFFIX)
 
 
 

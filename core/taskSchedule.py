@@ -10,7 +10,7 @@ from tornado import ioloop, gen
 from tornado.ioloop import PeriodicCallback
 from logger_helper import logger
 #from itchatInterface import cur_itchat_mode
-from wxpyInterface import cur_wxpy_mode
+from wxpyInterface import cur_wxpy_mode, register_task_reminder
 
 logger = logging.getLogger('taskSchedule')
 
@@ -33,6 +33,12 @@ class TaskSchedule(object):
         tornado.ioloop.IOLoop.instance().call_later(0, cur_wxpy_mode)
         tornado.ioloop.PeriodicCallback(cur_wxpy_mode, duration).start()
         #tornado.ioloop.IOLoop.current().start()
+
+    def mongoSchedule(self, duration=10000):
+        logger.info('mongodb routine job start')
+        tornado.ioloop.IOLoop.instance().call_later(0, register_task_reminder)
+        tornado.ioloop.PeriodicCallback(register_task_reminder, duration).start()
+
 
     def query(self):
         for i in self.db.collection.find({'MsgType': 'image', 'MsgId': '6366209871842252283'}):
