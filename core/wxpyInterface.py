@@ -44,7 +44,7 @@ def register_task_reminder():
         if remind_info.strip() and friend:
             bot.self.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
             #TODO add friend reminder
-            #friend.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
+            friend.send_msg(remind_info.strip() + TARGET_SUFFIX )
             
 def set_wxpy_mode(mode):
     REDIS_OBJ.client.set('WXPY_MODE', mode)
@@ -81,6 +81,7 @@ class WxpyHandler(tornado.web.RequestHandler):
         REDIS_OBJ.client.delete('TARGET_FRIENDS')
         #TODO, 临时策略
         REDIS_OBJ.client.sadd('TARGET_FRIENDS', u'刘兵')
+        REDIS_OBJ.client.sadd('TARGET_FRIENDS', u'momowa')
         MONGO_OBJ.xhx_task.remove()
         MONGO_OBJ.load_schedule(PROJ_SCHEDULE_FILE)
 

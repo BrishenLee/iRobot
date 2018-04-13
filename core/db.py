@@ -96,7 +96,7 @@ class MongoDB(object):
         return '\n'.join(task_infos) if task_infos else 'No task found'
 
     def task_reminder(self, name, cur_timestramp, duration=600):
-        logger.info('beg_task_noticer %s %s' % (name, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cur_timestramp))))
+        #logger.info('beg_task_noticer %s %s' % (name, time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cur_timestramp))))
         notice_infos = ''
         for it,t in enumerate(self.xhx_task.find({"$or":[{"task_owner":name},
             {"task_checker":name}]}).sort("time_beg_timestramp")):
