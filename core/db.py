@@ -76,6 +76,7 @@ class MongoDB(object):
         logger.info('All [%s] tasks loaded' % cnt)
         for t in self.xhx_task.find({'task_owner': u"刘兵"}):
             logger.info(t)
+        return cnt
 
     def get_task_by_name(self, name):
         logger.info('Search mongodb by %s' % name)

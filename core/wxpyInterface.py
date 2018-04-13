@@ -40,10 +40,12 @@ def register_task_reminder():
         #cur_timestramp = time.time()
         cur_timestramp = time.mktime(time.strptime('2018-04-07 11:52:00','%Y-%m-%d %H:%M:%S'))
         remind_info = MONGO_OBJ.task_reminder(friend_name, cur_timestramp, duration=REMIND_DURATION)
-        if remind_info.strip():
+        friend = bot.friends().search(friend_name)[0] if bot.friends().search(friend_name) else None
+        if remind_info.strip() and friend:
             bot.self.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
             #TODO add friend reminder
-
+            #friend.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
+            
 def set_wxpy_mode(mode):
     REDIS_OBJ.client.set('WXPY_MODE', mode)
 
@@ -91,52 +93,76 @@ class WxpyHandler(tornado.web.RequestHandler):
 
     @bot.register(bot.self, except_self=False)
     def self_reply(msg):
-        logger.info('Receive self msg [%s][%s][%s][%s][%s]' % (msg.text, msg.type, msg.sender, msg.receiver,
-            msg.sender.puid))
-        content = msg.text
-        return_msg = ''
-        #发送者为本人，进入控制逻辑
-        if content in [u'人工', u'人工模式', u'H', u'h']:
-            logger.info(u'Change mode to [%s]' % content)
-            set_wxpy_mode('HUMAN') 
-            logger.info(u'Current mode is [%s]' % get_wxpy_mode())
-            return_msg = u'Current mode is [%s]' % get_wxpy_mode()
-        elif content in [u'机器', u'机器模式', u'A', u'a']:
-            logger.info(u'Change mode to [%s]' % content)
-            set_wxpy_mode('AI') 
-            logger.info(u'Current mode is [%s]' % get_wxpy_mode())
-            return_msg = u'Current mode is [%s]' % get_wxpy_mode()
-        elif content in [u'群机器', u'群机器模式', u'GA', u'ga']:
-            logger.info(u'Change mode to [%s]' % content)
-            set_wxpy_mode('GAI') 
-            logger.info(u'Current mode is [%s]' % get_wxpy_mode())
-            return_msg = u'Current mode is [%s]' % get_wxpy_mode()
-        elif content in [u'?', u'stat', u'状态']:
-            return_msg = 'Mode: %s\nMEM: %s' % (get_wxpy_mode(), 'TODO')
-        elif content.strip().lower().startswith('add'):
-            #add register_name
-            register_names = content.strip().split()[1:] if len(content.strip().split()) > 1 else []
-            for rn in register_names:
-                logger.info('Add register [%s]' % rn)
-                friends = bot.friends().search(rn)
-                if len(friends) != 1:
-                    logger.info('Add register failed [%s]' % ','.join(f.name for f in friends))
-                    msg.forward(bot.self, prefix='Add register [%s] failed' % rn, suffix='0 or more than 1 friends found')
-                    continue
-                logger.info('Add register [%s][nick_name:%s, puid=%s] success' % (rn, friends[0].nick_name, friends[0].puid))
-                REDIS_OBJ.client.sadd('TARGET_FRIENDS', rn)
-                bot.self.send_msg('Add register [%s][nick_name:%s, puid=%s] success' % (rn, friends[0].nick_name,
-                    friends[0].puid))
-            logger.info(dump_json('All registers', list(REDIS_OBJ.client.smembers('TARGET_FRIENDS'))))
-            return_msg = 'All registers : [%s]'  % ','.join(list(REDIS_OBJ.client.smembers('TARGET_FRIENDS')))
-        elif content.strip().lower().startswith('task'):
-            task_owners = content.strip().split()[1:]
-            if len(task_owners) < 1:
-                logger.error('No task owner found')
-            for task_owner in task_owners:
-                bot.self.send_msg(MONGO_OBJ.get_task_by_name(task_owner))
-        #return时return_msg将发送到自己微信
-        return return_msg
+        #文本消息
+        if msg.type == 'Text':
+            logger.info('Receive self text msg [%s][%s][%s][%s][%s]' % (msg.text, msg.type, msg.sender, msg.receiver,
+                msg.sender.puid))
+            content = msg.text
+            return_msg = ''
+            #发送者为本人，进入控制逻辑
+            content = content.strip().lower()
+            if content in [u'人工', u'人工模式', u'H', u'h']:
+                logger.info(u'Change mode to [%s]' % content)
+                set_wxpy_mode('HUMAN') 
+                logger.info(u'Current mode is [%s]' % get_wxpy_mode())
+                return_msg = u'Current mode is [%s]' % get_wxpy_mode()
+            elif content in [u'机器', u'机器模式', u'A', u'a']:
+                logger.info(u'Change mode to [%s]' % content)
+                set_wxpy_mode('AI') 
+                logger.info(u'Current mode is [%s]' % get_wxpy_mode())
+                return_msg = u'Current mode is [%s]' % get_wxpy_mode()
+            elif content in [u'群机器', u'群机器模式', u'GA', u'ga']:
+                logger.info(u'Change mode to [%s]' % content)
+                set_wxpy_mode('GAI') 
+                logger.info(u'Current mode is [%s]' % get_wxpy_mode())
+                return_msg = u'Current mode is [%s]' % get_wxpy_mode()
+            elif content in [u'?', u'stat', u'状态']:
+                return_msg = 'Mode: %s\nMEM: %s' % (get_wxpy_mode(), 'TODO')
+            elif content.startswith('add') or content.startswith('del'):
+                #register_name
+                register_names = content.strip().split()[1:] if len(content.strip().split()) > 1 else []
+                if content.startswith('add'): 
+                    for rn in register_names:
+                        logger.info('Add register [%s]' % rn)
+                        if rn == u'刘兵':
+                            REDIS_OBJ.client.sadd('TARGET_FRIENDS', rn)
+                            continue
+                        friends = bot.friends().search(rn)
+                        if len(friends) != 1:
+                            logger.info('Add register failed [%s]' % ','.join(f.name for f in friends))
+                            msg.forward(bot.self, prefix='Add register [%s] failed' % rn, suffix='0 or more than 1 friends found')
+                            continue
+                        logger.info('Add register [%s][nick_name:%s, puid=%s] success' % (rn, friends[0].nick_name, friends[0].puid))
+                        REDIS_OBJ.client.sadd('TARGET_FRIENDS', rn)
+                        bot.self.send_msg('Add register [%s][nick_name:%s, puid=%s] success' % (rn, friends[0].nick_name,
+                            friends[0].puid))
+                    logger.info(dump_json('All registers', list(REDIS_OBJ.client.smembers('TARGET_FRIENDS'))))
+                    return_msg = 'All registers : [%s]'  % ','.join(list(REDIS_OBJ.client.smembers('TARGET_FRIENDS')))
+                elif content == 'del':
+                    #无后续参数，删除全部register
+                    logger.info('Delete all registers')
+                    bot.self.send_msg('Delete all registers [%s]' %
+                                ','.join(list(REDIS_OBJ.client.smembers('TARGET_FRIENDS'))))
+                    REDIS_OBJ.client.delete('TARGET_FRIENDS')
+            elif content.strip().lower().startswith('task'):
+                task_owners = content.strip().split()[1:]
+                if len(task_owners) < 1:
+                    logger.error('No task owner found')
+                for task_owner in task_owners:
+                    bot.self.send_msg(MONGO_OBJ.get_task_by_name(task_owner))
+            #return时return_msg将发送到自己微信
+            return return_msg
+        #文件消息
+        elif msg.type == 'Attachment':
+            logger.info('Receive self file msg [%s][%s][%s][%s][%s]' % (msg.file_name, msg.type, msg.sender, msg.receiver,
+                msg.sender.puid))
+            if msg.file_name == os.path.split(PROJ_SCHEDULE_FILE)[1]:
+                msg.get_file(save_path=PROJ_SCHEDULE_FILE)
+                logger.info('Save received file %s to %s' % (msg.file_name, PROJ_SCHEDULE_FILE))
+                MONGO_OBJ.xhx_task.remove()
+                cnt = MONGO_OBJ.load_schedule(PROJ_SCHEDULE_FILE)
+                bot.self.send_msg('%s tasks loaded' % cnt)
+
 
 
     @bot.register(Friend, TEXT)
