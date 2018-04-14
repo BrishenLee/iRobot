@@ -108,15 +108,17 @@ class MongoDB(object):
             beg_timestramp = t.get('task_beg_timestramp', 0)
             end_timestramp = t.get('task_end_timestramp', 0)
             notice_flag = t.get('is_noticed', 0)
-            if notice_flag == 1 or beg_timestramp == 0 or end_timestramp == 0:
+            #0: 未发送过提醒，1: 发送过开始任务提醒, 2:发送过结束任务提醒
+            if notice_flag > 2 or beg_timestramp == 0 or end_timestramp == 0:
                 continue
             #任务即将开始
-            if cur_timestramp > beg_timestramp - duration:
+            if (cur_timestramp > beg_timestramp - duration) and (cur_timestramp < beg_timestramp) and (notice_flag != 1):
                 notice_info.append(u'任务[%s]%s将于%s开始，请注意签收并回复指令！' % (task_id, task_desc, beg_time))
                 self.xhx_task.update({"task_id":task_id}, {"$set":{"is_noticed":1}})
-            elif cur_timestramp > end_timestramp - duration:
+            #任务即将结束
+            elif (cur_timestramp > end_timestramp - duration) and (cur_timestramp < end_timestramp) and (notice_flag != 2):
                 notice_info.append(u'任务[%s]%s将于%s结束，请注意修改任务状态！' % (task_id, task_desc, end_time))
-                self.xhx_task.update({"task_id":task_id}, {"$set":{"is_noticed":1}})
+                self.xhx_task.update({"task_id":task_id}, {"$set":{"is_noticed":2}})
             notice_infos += '\n'.join(notice_info)
         return notice_infos.strip()
         

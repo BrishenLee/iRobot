@@ -34,11 +34,14 @@ def cur_wxpy_mode():
 
 @gen.coroutine
 def register_task_reminder():
+    if get_wxpy_mode() != 'GAI':
+        logger.info('Not GAI mode, pass the reminder')
+        return
     for friend_name in REDIS_OBJ.client.smembers('TARGET_FRIENDS'):
         logger.info('Search register [%s] task' % friend_name)
         #TODO 
-        #cur_timestramp = time.time()
-        cur_timestramp = time.mktime(time.strptime('2018-04-07 11:52:00','%Y-%m-%d %H:%M:%S'))
+        cur_timestramp = time.time()
+        #cur_timestramp = time.mktime(time.strptime('2018-04-07 11:52:00','%Y-%m-%d %H:%M:%S'))
         remind_info = MONGO_OBJ.task_reminder(friend_name, cur_timestramp, duration=REMIND_DURATION)
         friend = bot.friends().search(friend_name)[0] if bot.friends().search(friend_name) else None
         if remind_info.strip() and friend:
