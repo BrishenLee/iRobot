@@ -48,7 +48,7 @@ def register_task_reminder():
         if remind_info.strip() and friend:
             bot.self.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
             #TODO add friend reminder
-            friend.send_msg(remind_info.strip() + '\n' + TARGET_SUFFIX )
+            friend.send_msg(remind_info.strip() + '\n' + TARGET_SUFFIX)
             
 def set_wxpy_mode(mode):
     REDIS_OBJ.client.set('WXPY_MODE', mode)
@@ -174,7 +174,9 @@ class WxpyHandler(tornado.web.RequestHandler):
         logger.info('Receive friend msg [%s] from [%s][%s] to [%s][%s]' % (msg.text, msg.sender, msg.sender.puid, msg.receiver,
             msg.receiver.puid))
         msg.forward(bot.self, prefix='Receive friend msg [', suffix='] from %s' % msg.sender.name)
-        if msg.text.strip().lower().startswith('task'):
+        if msg.text.strip() in [u'?', u'？']:
+            msg.sender.send_msg(u'【WARNING】\n本功能仅适用于826工程投产演练及上线流程，非法使用带来的生理或心理伤害，本人概不负责: )\n\n【当前功能】\n1. 回复“task 姓名”, 获取名下所有责任人和复核人任务；\n2. 回复“add 姓名”，经本人注册后，可接收任务提醒（开始前10分钟，指令群@时，结束前10分钟，暂无法区分高威与单高威）\n\nPS: 自建乞丐服务器，CPU low，存储low，网络low，随时存在宕机风险，且用且珍惜！欢迎提bug，反正提了也不改\n' + TARGET_SUFFIX) 
+        elif msg.text.strip().lower().startswith('task'):
             task_owners = msg.text.strip().split()[1:]
             if len(task_owners) < 1:
                 logger.error('No task owner found')
