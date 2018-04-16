@@ -113,11 +113,11 @@ class MongoDB(object):
                 continue
             #任务即将开始
             if (cur_timestramp > beg_timestramp - duration) and (cur_timestramp < beg_timestramp) and (notice_flag != 1):
-                notice_info.append(u'任务[%s]%s将于%s开始，请注意签收并回复指令！' % (task_id, task_desc, beg_time))
+                notice_info.append(u'任务[%s]%s将于%s开始，请注意签收并回复指令！\n\n' % (task_id, task_desc, beg_time))
                 self.xhx_task.update({"task_id":task_id}, {"$set":{"is_noticed":1}})
             #任务即将结束
             elif (cur_timestramp > end_timestramp - duration) and (cur_timestramp < end_timestramp) and (notice_flag != 2):
-                notice_info.append(u'任务[%s]%s将于%s结束，请注意修改任务状态！' % (task_id, task_desc, end_time))
+                notice_info.append(u'任务[%s]%s将于%s结束，请注意修改任务状态！\n\n' % (task_id, task_desc, end_time))
                 self.xhx_task.update({"task_id":task_id}, {"$set":{"is_noticed":2}})
             notice_infos += '\n'.join(notice_info)
         return notice_infos.strip()

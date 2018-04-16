@@ -37,8 +37,9 @@ def register_task_reminder():
     if get_wxpy_mode() != 'GAI':
         logger.info('Not GAI mode, pass the reminder')
         return
+    logger.info('Search register [%s] task' % ','.join(REDIS_OBJ.client.smembers('TARGET_FRIENDS')))
     for friend_name in REDIS_OBJ.client.smembers('TARGET_FRIENDS'):
-        logger.info('Search register [%s] task' % friend_name)
+        #logger.info('Search register [%s] task' % friend_name)
         #TODO 
         cur_timestramp = time.time()
         #cur_timestramp = time.mktime(time.strptime('2018-04-07 11:52:00','%Y-%m-%d %H:%M:%S'))
@@ -47,7 +48,7 @@ def register_task_reminder():
         if remind_info.strip() and friend:
             bot.self.send_msg('Send remind to [%s] [%s]' % (friend_name, remind_info.strip()))
             #TODO add friend reminder
-            friend.send_msg(remind_info.strip() + TARGET_SUFFIX )
+            friend.send_msg(remind_info.strip() + '\n' + TARGET_SUFFIX )
             
 def set_wxpy_mode(mode):
     REDIS_OBJ.client.set('WXPY_MODE', mode)
@@ -168,19 +169,25 @@ class WxpyHandler(tornado.web.RequestHandler):
                 bot.self.send_msg('%s tasks loaded' % cnt)
 
 
-
     @bot.register(Friend, TEXT)
     def friend_reply(msg):
         logger.info('Receive friend msg [%s] from [%s][%s] to [%s][%s]' % (msg.text, msg.sender, msg.sender.puid, msg.receiver,
             msg.receiver.puid))
         msg.forward(bot.self, prefix='Receive friend msg [', suffix='] from %s' % msg.sender.name)
-            
+        if msg.text.strip().lower().startswith('task'):
+            task_owners = msg.text.strip().split()[1:]
+            if len(task_owners) < 1:
+                logger.error('No task owner found')
+            for task_owner in task_owners:
+                msg.sender.send_msg(MONGO_OBJ.get_task_by_name(task_owner))
+        
     @bot.register(Group, TEXT)
     def group_reply(msg):
         #logger.info('msg : [%s] [%s] [%s]', type(msg), dump_json('debug', dir(msg)), dump_json('raw', msg.raw))
-        logger.info('Receive group msg [%s] from [%s][%s] to [%s][%s] in group[%s][%s]' % (msg.text, msg.member, msg.member.puid, msg.receiver,
-            msg.receiver.puid, msg.chat.nick_name, msg.chat.puid))
+        #logger.info('Receive group msg [%s] from [%s][%s] to [%s][%s] in group[%s][%s]' % (msg.text, msg.member, msg.member.puid, msg.receiver,
+        #    msg.receiver.puid, msg.chat.nick_name, msg.chat.puid))
         if get_wxpy_mode() == 'GAI' and is_target_group(msg.chat.nick_name) and is_target_keyword(msg.text):
+            logger.info('Receive target group msg [%s] from [%s][%s] to [%s][%s] in group[%s][%s]' % (msg.text, msg.member, msg.member.puid, msg.receiver, msg.receiver.puid, msg.chat.nick_name, msg.chat.puid))
             #check @TARGET_FRIENDS or not
             target_group = bot.groups().search(msg.chat.nick_name)[0] if bot.groups().search(msg.chat.nick_name) else None
             if not target_group:
@@ -189,16 +196,17 @@ class WxpyHandler(tornado.web.RequestHandler):
             #更新目标群member信息
             #target_group.update_group(members_details=True)
             for friend_name in REDIS_OBJ.client.smembers('TARGET_FRIENDS'):
-                if friend_name not in msg.text:
-                    pass
                 friends = bot.friends().search(friend_name)
-                if len(friends) != 1:
-                    logger.info('Found zero or more than one friend [%s] [%s]' % (friend_name, ','.join([f.name for f in friends])))
+                if friend_name not in msg.text or len(friends) != 1:
+                    logger.debug('Found zero or more than one friend [%s] [%s]' % (friend_name, ','.join([f.name for f in friends])))
                     continue
-                log_info = 'Send notice [%s] to register [%s]' % (msg.text, friends[0].name)
-                logger.info(log_info)
-                msg.forward(friends[0], suffix=TARGET_SUFFIX)
-                msg.forward(bot.self, prefix='Send notice [', suffix='] to register %s' % friends[0].name)
+                logger.info('Display name [%s] -> [%s]' % (friend_name, msg.chat.search(friend_name)[0].display_name))
+                #if ('@' + friend[0].display_name) in msg.text:
+                if friend_name in msg.text:
+                    log_info = 'Send notice [%s] to register [%s]' % (msg.text, friends[0].name)
+                    logger.info(log_info)
+                    msg.forward(friends[0], suffix=TARGET_SUFFIX)
+                    msg.forward(bot.self, prefix='Send notice [', suffix='] to register %s' % friends[0].name)
             if msg.is_at:
                 time.sleep(10)
                 logger.info('Send auto reply [%s] in group [%s]' % (TARGET_REPLY, msg.chat.nick_name))
