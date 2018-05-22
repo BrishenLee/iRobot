@@ -88,6 +88,8 @@ class WxpyHandler(tornado.web.RequestHandler):
         REDIS_OBJ.client.sadd('TARGET_FRIENDS', u'momowa')
         MONGO_OBJ.xhx_task.remove()
         MONGO_OBJ.load_schedule(PROJ_SCHEDULE_FILE)
+        MONGO_OBJ.tel_book.remove()
+        MONGO_OBJ.load_tel_book(TEL_BOOK_FILE)
 
     def on_finish(self):
         """
@@ -155,6 +157,12 @@ class WxpyHandler(tornado.web.RequestHandler):
                     logger.error('No task owner found')
                 for task_owner in task_owners:
                     bot.self.send_msg(MONGO_OBJ.get_task_by_name(task_owner))
+            elif content.strip().lower().startswith('tel'):
+                tel_keys = content.strip().split()[1:]
+                if len(tel_keys) < 1:
+                    logger.error('Not found')
+                for tel_key in tel_keys:
+                    bot.self.send_msg(MONGO_OBJ.get_tel_info_by_key(tel_key))
             #return时return_msg将发送到自己微信
             return return_msg
         #文件消息
@@ -167,6 +175,13 @@ class WxpyHandler(tornado.web.RequestHandler):
                 MONGO_OBJ.xhx_task.remove()
                 cnt = MONGO_OBJ.load_schedule(PROJ_SCHEDULE_FILE)
                 bot.self.send_msg('%s tasks loaded' % cnt)
+            elif msg.file_name == os.path.split(TEL_BOOK_FILE)[1]:
+                msg.get_file(save_path=TEL_BOOK_FILE)
+                logger.info('Save received file %s to %s' % (msg.file_name, TEL_BOOK_FILE))
+                MONGO_OBJ.tel_book.remove()
+                cnt = MONGO_OBJ.load_tel_book(TEL_BOOK_FILE)
+                bot.self.send_msg('%s tel loaded' % cnt)
+
 
 
     @bot.register(Friend, TEXT)
@@ -175,13 +190,19 @@ class WxpyHandler(tornado.web.RequestHandler):
             msg.receiver.puid))
         msg.forward(bot.self, prefix='Receive friend msg [', suffix='] from %s' % msg.sender.name)
         if msg.text.strip() in [u'?', u'？']:
-            msg.sender.send_msg(u'【WARNING】\n本功能仅适用于826工程投产演练及上线流程，非法使用带来的生理或心理伤害，本人概不负责: )\n\n【当前功能】\n1. 回复“task 姓名”, 获取名下所有责任人和复核人任务；\n2. 回复“add 姓名”，经本人注册后，可接收任务提醒（开始前10分钟，指令群@时，结束前10分钟，暂无法区分高威与单高威）\n\nPS: 自建乞丐服务器，CPU low，存储low，网络low，随时存在宕机风险，且用且珍惜！欢迎提bug，反正提了也不改\n' + TARGET_SUFFIX) 
+            msg.sender.send_msg(u'【WARNING】\n本功能仅适用于826工程投产演练及上线流程，非法使用带来的生理或心理伤害，本人概不负责:)\n\n【当前功能】\n1. 回复“task 姓名”, 获取名下所有责任人和复核人任务\n2. 回复“add 姓名”，经本人注册后，可接收任务提醒（开始前10分钟，指令群@时，结束前10分钟，暂无法区分高威与单高威）\n3. 回复“tel 姓名”，查询目标姓名的联系方式\n\nPS: 自建乞丐服务器，CPU low，存储low，网络low，随时存在宕机风险，且用且珍惜！欢迎提bug，反正提了也不改\n祝各位826一切顺利！' + TARGET_SUFFIX) 
         elif msg.text.strip().lower().startswith('task'):
             task_owners = msg.text.strip().split()[1:]
             if len(task_owners) < 1:
                 logger.error('No task owner found')
             for task_owner in task_owners:
                 msg.sender.send_msg(MONGO_OBJ.get_task_by_name(task_owner))
+        elif msg.text.strip().lower().startswith('tel'):
+            tel_keys = msg.text.strip().split()[1:]
+            if len(tel_keys) < 1:
+                logger.error('Not found')
+            for tel_key in tel_keys:
+                msg.sender.send_msg(MONGO_OBJ.get_tel_info_by_key(tel_key))
         
     @bot.register(Group, TEXT)
     def group_reply(msg):

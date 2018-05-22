@@ -34,6 +34,8 @@ class MongoDB(object):
         self.collection = self.db.weixin_msg
         #TODO 临时策略for xhx，创建xhx_task表
         self.xhx_task = self.db.xhx_task
+        #通讯录
+        self.tel_book = self.db.tel_book
 
     def parse_item(self, k, with_id=False):
         """
@@ -54,10 +56,12 @@ class MongoDB(object):
             if line and line.strip().startswith('ZK') and len(line.strip().split('\t')) == 6:
                 task_id, task_desc, task_owner, task_checker, task_beg_time, task_end_time = line.strip().split('\t')[:6]
                 try:
-                    task_beg_timestramp = time.mktime(time.strptime(task_beg_time,'%Y-%m-%d %H:%M:%S'))
-                    task_end_timestramp = time.mktime(time.strptime(task_end_time,'%Y-%m-%d %H:%M:%S'))
+                    #task_beg_timestramp = time.mktime(time.strptime(task_beg_time,'%Y-%m-%d %H:%M:%S'))
+                    #task_end_timestramp = time.mktime(time.strptime(task_end_time,'%Y-%m-%d %H:%M:%S'))
+                    task_beg_timestramp = time.mktime(time.strptime(task_beg_time,'%Y-%m-%d %H:%M'))
+                    task_end_timestramp = time.mktime(time.strptime(task_end_time,'%Y-%m-%d %H:%M'))
                 except:
-                    logger.error('Error time format in task %s' % task_id)
+                    logger.error('Error time format in task %s %s' % (task_id, traceback.format_exc()))
                     continue
                 task_dic = {"task_id": task_id, 
                         "task_desc": task_desc, 
@@ -121,8 +125,53 @@ class MongoDB(object):
                 self.xhx_task.update({"task_id":task_id}, {"$set":{"is_noticed":2}})
             notice_infos += '\n'.join(notice_info)
         return notice_infos.strip()
+    
+    def load_tel_book(self, tel_book_file):
+        logger.info('Loading tel book file %s' % tel_book_file)
+        cnt = 0
+        for line in open(tel_book_file):
+            try:
+                tel_item = line.rstrip('\n').split('\t')
+                tel_name, tel_no, dept = tel_item[:3]
+                tel_sys = tel_item[3] if len(tel_item) == 4 else ''
+                tel_name = tel_name.strip()
+                tel_dic = {"tel_name": tel_name, 
+                        "tel_no": tel_no, 
+                        "dept": dept,
+                        "tel_sys":tel_sys}
+                cnt += 1
+                if cnt % 100 == 0:
+                    logger.info('%s tel loaded' % cnt)
+                #如已存在，则跳过
+                #if self.tel_book.find({"$and":[{"tel_name":tel_name}, {"tel_no":tel_no}]}):
+                #    logger.info('tel info already loaded [%s-%s]' % (tel_name, tel_no))
+                #    continue
+                self.tel_book.insert_one(tel_dic)
+            except:
+                logger.error('Error tel format in line %s %s' % (line, traceback.format_exc()))
+        logger.info('All [%s] tel loaded' % cnt)
+        for t in self.tel_book.find({'tel_name': u"刘兵"}):
+            logger.info(t)
+        return cnt
         
-         
+    def get_tel_info_by_key(self, tel_key):
+        logger.info('Search mongodb tel_book by %s' % tel_key)
+        tel_infos = []
+        #TODO support other key
+        for it,t in enumerate(self.tel_book.find({"tel_name":tel_key})):
+            logger.info(t)
+            tel_info = []
+            tel_info.append(u'姓名: %s' % t.get('tel_name'))
+            tel_info.append(u'电话: %s' % t.get('tel_no'))
+            tel_info.append(u'部门: %s' % t.get('dept'))
+            #if t.get('tel_sys'):
+            #    tel_info.append(u'负责系统: %s' % t.get('tel_sys'))
+            if it > 0:
+                break
+            tel_infos.append('\n'.join(tel_info))
+        return '\n'.join(tel_infos) if tel_infos else 'Not found'
+
+
 
 @singleton
 class RedisDB(object):
@@ -136,7 +185,8 @@ class RedisDB(object):
 
 
 if __name__ == '__main__':
-    #mdb = MongoDB()
+    mdb = MongoDB()
+    '''
     #mdb.collection.insert_one({'test': 1})
     #for i in mdb.collection.find({'MsgType': 'image'}):
     #    print i, type(i)
@@ -152,3 +202,5 @@ if __name__ == '__main__':
     rdb.client.sadd('TARGET_FRIENDS', 'liubingnlp', 'L18656569610', 'wmm_hfut', 'oukayi', 'lichunchun_120')
     for r in rdb.client.smembers('TARGET_FRIENDS'):
         print r
+    '''
+    mdb.load_tel_book('TELBOOK.txt')

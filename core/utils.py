@@ -24,6 +24,7 @@ PROJ_PATH = os.path.expanduser('~/project/weixin_local/')
 PROJ_CORE_PATH = '%s/core' % PROJ_PATH
 PROJ_LOG_FILE = '%s/log/weixin.log' % PROJ_PATH
 PROJ_SCHEDULE_FILE = '%s/TASK.txt' % PROJ_CORE_PATH
+TEL_BOOK_FILE = '%s/TELBOOK.txt' % PROJ_CORE_PATH
 WEIXIN_PIC_PATH = '%s/static/weixin_img/' % PROJ_CORE_PATH
 WEIXIN_THUMBPIC_PATH = '%s/static/weixin_thumb/' % PROJ_CORE_PATH
 
