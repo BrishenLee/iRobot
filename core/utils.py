@@ -29,7 +29,7 @@ WEIXIN_PIC_PATH = '%s/static/weixin_img/' % PROJ_CORE_PATH
 WEIXIN_THUMBPIC_PATH = '%s/static/weixin_thumb/' % PROJ_CORE_PATH
 
 #temp config
-TARGET_GROUPS = [u'826工程投产（演练）指令群']
+TARGET_GROUPS = [u'826工程投产指令群']
 #TARGET_GROUPS = [u'ITCHAT-TEST']
 TARGET_KEYWORDS = [u'具备执行条件', u'收到请回复']
 TARGET_REPLY = u'收到'
